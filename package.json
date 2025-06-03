@@ -1,0 +1,74 @@
+{
+  "name": "haxhelp-webkit-exploitation-framework",
+  "version": "2.0.0",
+  "description": "Advanced WebKit Exploitation Framework - A comprehensive JavaScript library for WebKit vulnerability research and exploit development",
+  "main": "haxhelp.js",
+  "scripts": {
+    "test": "echo \"No tests specified\" && exit 0",
+    "serve": "python3 -m http.server 8080",
+    "serve-examples": "cd examples && python3 -m http.server 8080",
+    "lint": "eslint haxhelp.js",
+    "minify": "uglifyjs haxhelp.js -o haxhelp.min.js --compress --mangle",
+    "demo": "open examples/basic-usage.html",
+    "advanced-demo": "open examples/advanced-research.html"
+  },
+  "keywords": [
+    "haxhelp",
+    "webkit",
+    "security",
+    "research",
+    "exploit",
+    "vulnerability",
+    "browser",
+    "javascript",
+    "memory",
+    "heap",
+    "rop",
+    "shellcode",
+    "penetration-testing",
+    "bug-bounty",
+    "security-research",
+    "exploitation",
+    "jit",
+    "dom",
+    "type-confusion",
+    "use-after-free",
+    "buffer-overflow"
+  ],
+  "author": "Sammy Lord <sammy@haxhelp.dev>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sammylord/haxhelp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sammylord/haxhelp/issues"
+  },
+  "homepage": "https://github.com/sammylord/haxhelp#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "browser": "haxhelp.js",
+  "files": [
+    "haxhelp.js",
+    "haxhelp.min.js",
+    "README.md",
+    "LICENSE",
+    "docs/",
+    "examples/"
+  ],
+  "devDependencies": {
+    "eslint": "^8.0.0",
+    "uglify-js": "^3.17.0"
+  },
+  "peerDependencies": {},
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/sammylord"
+  },
+  "config": {
+    "framework": "HaxHelp",
+    "version": "2.0.0",
+    "author": "Sammy Lord"
+  }
+} 
