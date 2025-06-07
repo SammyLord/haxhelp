@@ -1,6 +1,6 @@
 # HaxHelp - Advanced WebKit Exploitation Framework
 
-A comprehensive JavaScript library designed to aid security researchers in WebKit vulnerability analysis and exploit development.
+A comprehensive JavaScript library designed to aid security researchers in WebKit vulnerability analysis and exploit development. Also check out [jitPhone!](https://github.com/SammyLord/jitphone)
 
 ## ⚠️ Legal and Ethical Use Only
 
