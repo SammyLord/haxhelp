@@ -85,7 +85,7 @@ MIT License - See LICENSE file for details.
 
 ## Author
 
-Created by Sammy Lord - Advanced security researcher and exploit developer.
+Created by Sammy Lord - Advanced vibe coder.
 
 ## Contributing
 
