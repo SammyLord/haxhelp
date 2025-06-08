@@ -172,8 +172,8 @@
             <p>Simulate UAF conditions for vulnerability research:</p>
             <div class="code-block">
 // Create objects, free them, then attempt to use<br>
-const objects = hh.memory.groomHeap(0x100, 100);<br>
-hh.memory.createHoles(objects, 'every_other');<br>
+const groom = hh.memory.advancedGrooming(0x100, 100);<br>
+hh.memory.createAdvancedHoles(groom.id, 'every_other');<br>
 // Simulate dangling pointer usage
             </div>
             <button onclick="simulateUAF()">Simulate UAF</button>
@@ -197,7 +197,7 @@ const confused = hh.webkit.createConfusedTypes();<br>
             <p>Advanced heap layout manipulation:</p>
             <div class="code-block">
 // Precise heap layout control<br>
-hh.memory.heapSpray(0x1000, 0x41414141, 200);<br>
+hh.memory.precisionSpray({size: 0x1000, pattern: 0x41414141, count: 200});<br>
 // Create specific patterns and holes
             </div>
             <button onclick="performHeapFengShui()">Heap Feng Shui</button>
@@ -209,7 +209,7 @@ hh.memory.heapSpray(0x1000, 0x41414141, 200);<br>
             <p>JIT compiler exploitation techniques:</p>
             <div class="code-block">
 // Generate JIT spray payloads<br>
-const payload = hh.webkit.analyzeJIT();<br>
+const payload = hh.webkit.advancedJITAnalysis();<br>
 // Trigger JIT compilation with controlled data
             </div>
             <button onclick="setupJITSpray()">Setup JIT Spray</button>
@@ -221,7 +221,7 @@ const payload = hh.webkit.analyzeJIT();<br>
             <p>Advanced memory disclosure techniques:</p>
             <div class="code-block">
 // Probe memory layout and contents<br>
-const analysis = hh.inspect.analyzeObject(window, 5);<br>
+const analysis = hh.inspect.deepAnalyze(window, 'standard', 5);<br>
 // Extract sensitive information
             </div>
             <button onclick="probeMemoryLayout()">Probe Memory</button>
@@ -299,31 +299,25 @@ const analysis = hh.inspect.analyzeObject(window, 5);<br>
             console.log('🧬 === USE-AFTER-FREE SIMULATION ===');
             console.log('Creating victim objects...');
             
-            const victims = [];
-            for (let i = 0; i < 50; i++) {
-                victims.push({
-                    id: i,
-                    data: new Array(64).fill(0x41414141),
-                    vtable: 0x7fffffff1000 + i * 8
-                });
-            }
+            const groom = hh.memory.advancedGrooming(0x100, 50, 'linear');
             
             console.log('Freeing objects (creating holes)...');
-            hh.memory.createHoles(victims, 'every_other');
+            hh.memory.createAdvancedHoles(groom.id, 'every_other');
             
             console.log('Allocating confusing objects...');
             const confused = hh.webkit.createConfusedTypes();
             
             console.log('Attempting to use freed objects...');
-            for (let i = 1; i < victims.length; i += 2) {
-                if (victims[i] === null) {
+            const objects = groom.objects;
+            for (let i = 1; i < objects.length; i += 2) {
+                if (objects[i] === null) {
                     console.log(`Object ${i} is freed (null)`);
                 } else {
-                    console.log(`Object ${i} still exists: ${typeof victims[i]}`);
+                    console.log(`Object ${i} still exists: ${typeof objects[i]}`);
                 }
             }
             
-            heapObjectCount += victims.length + confused.length;
+            heapObjectCount += groom.objects.length;
             updateStats();
         }
 
@@ -331,26 +325,7 @@ const analysis = hh.inspect.analyzeObject(window, 5);<br>
             console.log('💥 === TRIGGERING UAF EXPLOIT ===');
             console.log('⚠️ WARNING: This is a controlled simulation');
             
-            // Create a more complex UAF scenario
-            const target = { 
-                type: 'vulnerable_object',
-                size: 0x100,
-                data: new ArrayBuffer(256)
-            };
-            
-            // Simulate freeing the object
-            target.data = null;
-            
-            // Allocate new object in same location
-            const newObj = new Uint32Array(64);
-            newObj.fill(0x42424242);
-            
-            // Simulate using the "freed" object
-            console.log('EXPLOIT: Attempting to access freed object...');
-            console.log(`Target type: ${target.type}`);
-            console.log('EXPLOIT: Memory corruption simulated');
-            
-            hh.debug.trackMemory();
+            hh.exploit.triggerUAFExploit();
         }
 
         function setupTypeConfusion() {
@@ -366,7 +341,7 @@ const analysis = hh.inspect.analyzeObject(window, 5);<br>
             
             // Analyze each object's internal structure
             objects.forEach((obj, index) => {
-                const analysis = hh.inspect.analyzeObject(obj, 2);
+                const analysis = hh.inspect.deepAnalyze(obj, 'standard', 2);
                 console.log(`Object ${index}: ${analysis.type} (${analysis.constructor})`);
                 analysisCount++;
             });
@@ -393,27 +368,8 @@ const analysis = hh.inspect.analyzeObject(window, 5);<br>
             console.log('💥 === EXPLOITING TYPE CONFUSION ===');
             console.log('Creating type-confused objects...');
             
-            // Create array that will be confused with typed array
-            const victim = new Array(0x100);
-            victim.fill(0x41414141);
-            
-            // Create typed array with controlled data
-            const attacker = new Float64Array(0x100);
-            
-            // Fill with special pattern for exploitation
-            for (let i = 0; i < attacker.length; i++) {
-                attacker[i] = 1.1 + i * 0.1;
-            }
-            
-            console.log('EXPLOIT: Type confusion in progress...');
-            console.log(`Victim array length: ${victim.length}`);
-            console.log(`Attacker array length: ${attacker.length}`);
-            
-            // Simulate type confusion exploitation
-            const pattern = hh.utils.cyclicPattern(256);
-            console.log(`Generated exploit pattern: ${pattern.substring(0, 50)}...`);
-            
-            hh.debug.hexdump(attacker.buffer, 0, 64);
+            const confused = hh.webkit.createConfusedTypes();
+            hh.exploit.exploitTypeConfusion(confused);
         }
 
         function performHeapFengShui() {
@@ -422,12 +378,12 @@ const analysis = hh.inspect.analyzeObject(window, 5);<br>
             
             // Phase 1: Initial heap preparation
             console.log('Phase 1: Initial grooming...');
-            const initial = hh.memory.groomHeap(0x80, 200);
-            heapObjectCount += initial.length;
+            const initialGroom = hh.memory.advancedGrooming(0x80, 200);
+            heapObjectCount += initialGroom.objects.length;
             
             // Phase 2: Create specific pattern
             console.log('Phase 2: Creating holes...');
-            hh.memory.createHoles(initial, 'every_other');
+            hh.memory.createAdvancedHoles(initialGroom.id, 'every_other');
             
             // Phase 3: Fill holes with controlled data
             console.log('Phase 3: Filling holes with controlled data...');
@@ -443,8 +399,8 @@ const analysis = hh.inspect.analyzeObject(window, 5);<br>
             
             // Phase 4: Heap spraying
             console.log('Phase 4: Final heap spray...');
-            const spray = hh.memory.heapSpray(0x1000, 0x41424344, 50);
-            sprayCount += spray.length;
+            const spray = hh.memory.precisionSpray({size: 0x1000, pattern: 0x41424344, count: 50});
+            sprayCount += spray.arrays.length;
             
             console.log('Heap Feng Shui complete!');
             updateStats();
@@ -459,7 +415,7 @@ const analysis = hh.inspect.analyzeObject(window, 5);<br>
                 testObjects.push(new ArrayBuffer(0x100 + i * 16));
             }
             
-            hh.inspect.visualizeLayout(testObjects);
+            hh.inspect.visualizeExploitLayout(testObjects);
             
             // Validate heap integrity
             console.log('Validating heap integrity...');
@@ -503,28 +459,7 @@ const analysis = hh.inspect.analyzeObject(window, 5);<br>
             console.log('💥 === EXECUTING JIT SPRAY ===');
             console.log('⚠️ DANGER: JIT spray attack in progress');
             
-            // Create multiple JIT functions with controlled constants
-            const functions = [];
-            
-            for (let i = 0; i < 100; i++) {
-                const func = new Function(`
-                    var payload_${i} = 0x41414141 + ${i};
-                    var nop_sled = 0x90909090;
-                    return payload_${i} ^ nop_sled;
-                `);
-                
-                // Trigger JIT compilation
-                for (let j = 0; j < 1000; j++) {
-                    func();
-                }
-                
-                functions.push(func);
-            }
-            
-            console.log(`Created and JIT-compiled ${functions.length} spray functions`);
-            console.log('JIT spray attack completed');
-            
-            hh.debug.trackMemory();
+            hh.exploit.executeJITSpray();
         }
 
         function probeMemoryLayout() {
@@ -532,18 +467,18 @@ const analysis = hh.inspect.analyzeObject(window, 5);<br>
             
             // Probe window object structure
             console.log('Probing window object...');
-            const windowAnalysis = hh.inspect.analyzeObject(window, 3);
+            const windowAnalysis = hh.inspect.deepAnalyze(window, 'standard', 3);
             console.log(`Window properties: ${windowAnalysis.properties.length}`);
             console.log(`Window methods: ${windowAnalysis.methods.length}`);
             
             // Probe document structure
             console.log('Probing document object...');
-            const docAnalysis = hh.inspect.analyzeObject(document, 2);
+            const docAnalysis = hh.inspect.deepAnalyze(document, 'standard', 2);
             console.log(`Document properties: ${docAnalysis.properties.length}`);
             
             // Probe navigator object
             console.log('Probing navigator object...');
-            const navAnalysis = hh.inspect.analyzeObject(navigator, 2);
+            const navAnalysis = hh.inspect.deepAnalyze(navigator, 'standard', 2);
             console.log(`Navigator properties: ${navAnalysis.properties.length}`);
             
             analysisCount += 3;
@@ -553,27 +488,9 @@ const analysis = hh.inspect.analyzeObject(window, 5);<br>
         function extractInformation() {
             console.log('📤 === INFORMATION EXTRACTION ===');
             
-            // Extract engine information
-            const engineInfo = hh.webkit.getEngineInfo();
-            console.log('Engine Information:');
-            Object.entries(engineInfo).forEach(([key, value]) => {
-                console.log(`  ${key}: ${value}`);
-            });
-            
-            // Extract memory information
-            if (performance.memory) {
-                const memory = performance.memory;
-                console.log('Memory Information:');
-                console.log(`  Used: ${(memory.usedJSHeapSize / 1024 / 1024).toFixed(2)} MB`);
-                console.log(`  Total: ${(memory.totalJSHeapSize / 1024 / 1024).toFixed(2)} MB`);
-                console.log(`  Limit: ${(memory.jsHeapSizeLimit / 1024 / 1024).toFixed(2)} MB`);
-            }
-            
-            // Extract timing information
-            console.log('Performance Information:');
-            console.log(`  Now: ${performance.now().toFixed(2)} ms`);
-            if (performance.timing) {
-                console.log(`  Load: ${performance.timing.loadEventEnd - performance.timing.navigationStart} ms`);
+            const primitives = hh.exploit.exploitTypeConfusion(hh.webkit.createConfusedTypes());
+            if (primitives.success) {
+                hh.exploit.extractInformation(primitives.primitives, {a: 1, b: 2});
             }
         }
 
@@ -606,36 +523,18 @@ const analysis = hh.inspect.analyzeObject(window, 5);<br>
             ];
             
             crashVectors.forEach((vector, index) => {
-                try {
+                hh.debug.analyzeCrash(() => {
                     console.log(`Testing crash vector ${index + 1}...`);
                     vector();
                     console.log(`Vector ${index + 1}: No crash`);
-                } catch (e) {
-                    console.log(`Vector ${index + 1}: ${e.constructor.name} - ${e.message}`);
-                }
+                });
             });
         }
 
         function memoryExhaustion() {
             console.log('🧨 === MEMORY EXHAUSTION TEST ===');
             console.log('⚠️ WARNING: May cause system instability');
-            
-            const chunks = [];
-            let allocated = 0;
-            
-            try {
-                while (allocated < 100) { // Limit to prevent system crash
-                    chunks.push(new ArrayBuffer(10 * 1024 * 1024)); // 10MB chunks
-                    allocated++;
-                    
-                    if (allocated % 10 === 0) {
-                        console.log(`Allocated ${allocated * 10} MB`);
-                        hh.debug.trackMemory();
-                    }
-                }
-            } catch (e) {
-                console.log(`Memory exhaustion at ${allocated * 10} MB: ${e.message}`);
-            }
+            hh.debug.memoryExhaustion();
         }
 
         function startMonitoring() {
@@ -647,7 +546,8 @@ const analysis = hh.inspect.analyzeObject(window, 5);<br>
                 document.getElementById('progress').style.width = progress + '%';
                 
                 if (progress % 25 === 0) {
-                    hh.debug.trackMemory();
+                    const stats = hh.memory._getMemoryStats();
+                    console.log(`Memory usage: ${(stats.used / 1024/1024).toFixed(2)} MB`);
                     updateStats();
                 }
                 

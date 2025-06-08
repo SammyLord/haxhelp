@@ -289,7 +289,7 @@
                     throw new Error(`Unknown hole strategy: ${strategy}`);
             }
             
-            this.forceGC();
+            this.enhancedGC();
             return this._analyzeHoles(objects);
         }
 

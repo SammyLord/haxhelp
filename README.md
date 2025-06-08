@@ -59,7 +59,8 @@ const analysis = hh.inspect.deepAnalyze(targetObject, 'exploitation');
 const ropChain = hh.rop.autoChain({
     target: 'system_call',
     args: ['/bin/sh'],
-    constraints: ['no_null_bytes']
+    constraints: ['no_null_bytes'],
+    architecture: 'arm64' // for devices such as nintendo switch and iphones
 });
 
 // Advanced shellcode generation
