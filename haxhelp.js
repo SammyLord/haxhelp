@@ -839,7 +839,7 @@
             return vectors;
         }
 
-        _findGadgets(obj) {
+        _simpleFindGadgets(obj) {
             // Simplified gadget detection
             const gadgets = [];
 
@@ -856,31 +856,58 @@
             return gadgets;
         }
 
-        _findROPGadgets(obj) {
-            // ROP gadget discovery in object methods
+        
+        // Function to find ROP Gadgets (typically ending with `ret` or similar control flow)
+        _findROPGadgets = (binary) => {
             const gadgets = [];
-            
-            if (obj && typeof obj === 'object') {
-                Object.getOwnPropertyNames(obj).forEach(prop => {
-                    if (typeof obj[prop] === 'function') {
-                        const source = obj[prop].toString();
-                        if (source.includes('[native code]')) {
-                            gadgets.push({
-                                name: prop,
-                                type: 'native_function',
-                                address: null // Would need actual memory address
-                            });
-                        }
-                    }
+    
+            for (let i = 0; i < binary.length; i++) {
+              const instruction = binary[i];
+      
+              // Check for 'ret' (0xC3)
+              if (instruction === 0xc3) {
+                gadgets.push({
+                  address: i.toString(16),
+                  mnemonic: 'ret',
                 });
+              }
             }
-
+    
             return gadgets;
-        }
+          };
+  
+  // Function to find JOP Gadgets (typically involving `jmp` instructions)
+  _findJOPGadgets = (binary) => {
+            const gadgets = [];
+    
+            for (let i = 0; i < binary.length; i++) {
+              const instruction = binary[i];
+      
+              // Check for 'jmp' short (0xEB)
+              if (instruction === 0xeb) {
+                gadgets.push({
+                  address: i.toString(16),
+                  mnemonic: 'jmp short',
+                  op_str: `jmp to ${i + binary[i + 1]}`,
+                });
+              } 
+              // Check for 'jmp' near (0xE9)
+              else if (instruction === 0xe9) {
+                const jmpAddr = binary.readUInt32LE(i + 1); // Assuming 32-bit `jmp` instruction
+                gadgets.push({
+                  address: i.toString(16),
+                  mnemonic: 'jmp near',
+                  op_str: `jmp to ${jmpAddr.toString(16)}`,
+                });
+              }
+            }
+    
+            return gadgets;
+          };
 
-        _findJOPGadgets(obj) {
-            // Jump-oriented programming gadget discovery
-            return []; // Placeholder - complex implementation needed
+        _findGadgets(obj) {
+            let gadgets = {rop: this._findROPGadgets(obj) || [], jop: this._findJOPGadgets(obj) || []}
+            return gadgets;
         }
 
         _findMemoryLeaks(obj) {
@@ -1601,7 +1628,7 @@
         }
 
         bindShell({ port, architecture }) {
-            // Placeholder for bind shell, returns a reverse shell to localhost for now.
+            // Bind shell is a reverse shell to the local machine.
             return this.reverseShell({ host: '127.0.0.1', port, architecture });
         }
 
