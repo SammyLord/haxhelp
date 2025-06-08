@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WERL - Advanced Research Techniques</title>
+    <title>HaxHelp - Advanced Research Techniques</title>
     <style>
         body {
             font-family: 'Courier New', monospace;
@@ -140,7 +140,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔬 Advanced WebKit Research Laboratory</h1>
+            <h1>🔬 Advanced HaxHelp Research Laboratory</h1>
             <p>Sophisticated Exploit Development & Vulnerability Analysis</p>
         </div>
 
@@ -172,8 +172,8 @@
             <p>Simulate UAF conditions for vulnerability research:</p>
             <div class="code-block">
 // Create objects, free them, then attempt to use<br>
-const objects = werl.memory.groomHeap(0x100, 100);<br>
-werl.memory.createHoles(objects, 'every_other');<br>
+const objects = hh.memory.groomHeap(0x100, 100);<br>
+hh.memory.createHoles(objects, 'every_other');<br>
 // Simulate dangling pointer usage
             </div>
             <button onclick="simulateUAF()">Simulate UAF</button>
@@ -185,7 +185,7 @@ werl.memory.createHoles(objects, 'every_other');<br>
             <p>Create complex type confusion scenarios:</p>
             <div class="code-block">
 // Create polymorphic objects for type confusion<br>
-const confused = werl.webkit.createConfusedTypes();<br>
+const confused = hh.webkit.createConfusedTypes();<br>
 // Manipulate object types dynamically
             </div>
             <button onclick="setupTypeConfusion()">Setup Type Confusion</button>
@@ -197,7 +197,7 @@ const confused = werl.webkit.createConfusedTypes();<br>
             <p>Advanced heap layout manipulation:</p>
             <div class="code-block">
 // Precise heap layout control<br>
-werl.memory.heapSpray(0x1000, 0x41414141, 200);<br>
+hh.memory.heapSpray(0x1000, 0x41414141, 200);<br>
 // Create specific patterns and holes
             </div>
             <button onclick="performHeapFengShui()">Heap Feng Shui</button>
@@ -209,7 +209,7 @@ werl.memory.heapSpray(0x1000, 0x41414141, 200);<br>
             <p>JIT compiler exploitation techniques:</p>
             <div class="code-block">
 // Generate JIT spray payloads<br>
-const payload = werl.webkit.analyzeJIT();<br>
+const payload = hh.webkit.analyzeJIT();<br>
 // Trigger JIT compilation with controlled data
             </div>
             <button onclick="setupJITSpray()">Setup JIT Spray</button>
@@ -221,7 +221,7 @@ const payload = werl.webkit.analyzeJIT();<br>
             <p>Advanced memory disclosure techniques:</p>
             <div class="code-block">
 // Probe memory layout and contents<br>
-const analysis = werl.inspect.analyzeObject(window, 5);<br>
+const analysis = hh.inspect.analyzeObject(window, 5);<br>
 // Extract sensitive information
             </div>
             <button onclick="probeMemoryLayout()">Probe Memory</button>
@@ -254,7 +254,7 @@ const analysis = werl.inspect.analyzeObject(window, 5);<br>
         </div>
     </div>
 
-    <script src="../werl.js"></script>
+    <script src="../haxhelp.js"></script>
     <script>
         // Enhanced console output with syntax highlighting
         const outputDiv = document.getElementById('output');
@@ -280,7 +280,7 @@ const analysis = werl.inspect.analyzeObject(window, 5);<br>
         };
 
         console.log('🔬 Advanced Research Laboratory Online');
-        console.log(`Engine: ${werl.engine} | Version: ${werl.version}`);
+        console.log(`Engine: ${hh.engine.name} | Version: ${hh.version}`);
 
         // Update statistics
         function updateStats() {
@@ -309,10 +309,10 @@ const analysis = werl.inspect.analyzeObject(window, 5);<br>
             }
             
             console.log('Freeing objects (creating holes)...');
-            werl.memory.createHoles(victims, 'every_other');
+            hh.memory.createHoles(victims, 'every_other');
             
             console.log('Allocating confusing objects...');
-            const confused = werl.webkit.createConfusedTypes();
+            const confused = hh.webkit.createConfusedTypes();
             
             console.log('Attempting to use freed objects...');
             for (let i = 1; i < victims.length; i += 2) {
@@ -350,7 +350,7 @@ const analysis = werl.inspect.analyzeObject(window, 5);<br>
             console.log(`Target type: ${target.type}`);
             console.log('EXPLOIT: Memory corruption simulated');
             
-            werl.debug.trackMemory();
+            hh.debug.trackMemory();
         }
 
         function setupTypeConfusion() {
@@ -366,7 +366,7 @@ const analysis = werl.inspect.analyzeObject(window, 5);<br>
             
             // Analyze each object's internal structure
             objects.forEach((obj, index) => {
-                const analysis = werl.inspect.analyzeObject(obj, 2);
+                const analysis = hh.inspect.analyzeObject(obj, 2);
                 console.log(`Object ${index}: ${analysis.type} (${analysis.constructor})`);
                 analysisCount++;
             });
@@ -410,10 +410,10 @@ const analysis = werl.inspect.analyzeObject(window, 5);<br>
             console.log(`Attacker array length: ${attacker.length}`);
             
             // Simulate type confusion exploitation
-            const pattern = werl.utils.cyclicPattern(256);
+            const pattern = hh.utils.cyclicPattern(256);
             console.log(`Generated exploit pattern: ${pattern.substring(0, 50)}...`);
             
-            werl.debug.hexdump(attacker.buffer, 0, 64);
+            hh.debug.hexdump(attacker.buffer, 0, 64);
         }
 
         function performHeapFengShui() {
@@ -422,12 +422,12 @@ const analysis = werl.inspect.analyzeObject(window, 5);<br>
             
             // Phase 1: Initial heap preparation
             console.log('Phase 1: Initial grooming...');
-            const initial = werl.memory.groomHeap(0x80, 200);
+            const initial = hh.memory.groomHeap(0x80, 200);
             heapObjectCount += initial.length;
             
             // Phase 2: Create specific pattern
             console.log('Phase 2: Creating holes...');
-            werl.memory.createHoles(initial, 'every_other');
+            hh.memory.createHoles(initial, 'every_other');
             
             // Phase 3: Fill holes with controlled data
             console.log('Phase 3: Filling holes with controlled data...');
@@ -443,7 +443,7 @@ const analysis = werl.inspect.analyzeObject(window, 5);<br>
             
             // Phase 4: Heap spraying
             console.log('Phase 4: Final heap spray...');
-            const spray = werl.memory.heapSpray(0x1000, 0x41424344, 50);
+            const spray = hh.memory.heapSpray(0x1000, 0x41424344, 50);
             sprayCount += spray.length;
             
             console.log('Heap Feng Shui complete!');
@@ -459,7 +459,7 @@ const analysis = werl.inspect.analyzeObject(window, 5);<br>
                 testObjects.push(new ArrayBuffer(0x100 + i * 16));
             }
             
-            werl.inspect.visualizeLayout(testObjects);
+            hh.inspect.visualizeLayout(testObjects);
             
             // Validate heap integrity
             console.log('Validating heap integrity...');
@@ -524,7 +524,7 @@ const analysis = werl.inspect.analyzeObject(window, 5);<br>
             console.log(`Created and JIT-compiled ${functions.length} spray functions`);
             console.log('JIT spray attack completed');
             
-            werl.debug.trackMemory();
+            hh.debug.trackMemory();
         }
 
         function probeMemoryLayout() {
@@ -532,18 +532,18 @@ const analysis = werl.inspect.analyzeObject(window, 5);<br>
             
             // Probe window object structure
             console.log('Probing window object...');
-            const windowAnalysis = werl.inspect.analyzeObject(window, 3);
+            const windowAnalysis = hh.inspect.analyzeObject(window, 3);
             console.log(`Window properties: ${windowAnalysis.properties.length}`);
             console.log(`Window methods: ${windowAnalysis.methods.length}`);
             
             // Probe document structure
             console.log('Probing document object...');
-            const docAnalysis = werl.inspect.analyzeObject(document, 2);
+            const docAnalysis = hh.inspect.analyzeObject(document, 2);
             console.log(`Document properties: ${docAnalysis.properties.length}`);
             
             // Probe navigator object
             console.log('Probing navigator object...');
-            const navAnalysis = werl.inspect.analyzeObject(navigator, 2);
+            const navAnalysis = hh.inspect.analyzeObject(navigator, 2);
             console.log(`Navigator properties: ${navAnalysis.properties.length}`);
             
             analysisCount += 3;
@@ -554,7 +554,7 @@ const analysis = werl.inspect.analyzeObject(window, 5);<br>
             console.log('📤 === INFORMATION EXTRACTION ===');
             
             // Extract engine information
-            const engineInfo = werl.webkit.getEngineInfo();
+            const engineInfo = hh.webkit.getEngineInfo();
             console.log('Engine Information:');
             Object.entries(engineInfo).forEach(([key, value]) => {
                 console.log(`  ${key}: ${value}`);
@@ -630,7 +630,7 @@ const analysis = werl.inspect.analyzeObject(window, 5);<br>
                     
                     if (allocated % 10 === 0) {
                         console.log(`Allocated ${allocated * 10} MB`);
-                        werl.debug.trackMemory();
+                        hh.debug.trackMemory();
                     }
                 }
             } catch (e) {
@@ -647,7 +647,7 @@ const analysis = werl.inspect.analyzeObject(window, 5);<br>
                 document.getElementById('progress').style.width = progress + '%';
                 
                 if (progress % 25 === 0) {
-                    werl.debug.trackMemory();
+                    hh.debug.trackMemory();
                     updateStats();
                 }
                 
@@ -699,8 +699,8 @@ const analysis = werl.inspect.analyzeObject(window, 5);<br>
                     sprayCount: sprayCount,
                     analysisCount: analysisCount
                 },
-                engine: werl.engine,
-                version: werl.version,
+                engine: hh.engine.name,
+                version: hh.version,
                 consoleOutput: outputDiv.innerText
             };
             
